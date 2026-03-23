@@ -317,7 +317,10 @@
         </div>
         <button class="btn btn-s" onclick="handleLogout()">🚪 Cerrar sesión</button>
         <hr class="div">
-        <p style="font-size:.72rem;color:var(--muted);line-height:1.5">🔐 Documentos cifrados con AES-256-GCM.<br>Los datos se guardan en este navegador.</p>
+        <p style="font-size:.72rem;color:var(--muted);line-height:1.5;margin-bottom:.75rem">🔐 Documentos cifrados con AES-256-GCM.<br>Los datos se guardan en este navegador.</p>
+        <button class="btn btn-s" id="btn-export" onclick="doExportBackup()" style="margin-bottom:.5rem;font-size:.82rem">💾 Exportar backup</button>
+        <button class="btn btn-s" id="btn-import" onclick="triggerImport()" style="font-size:.82rem">📂 Importar backup</button>
+        <input type="file" id="backupInput" accept=".casaid" onchange="handleBackupFile(event)" style="display:none">
       </div>
 
       <button id="install-btn" onclick="installPWA()">📲 Instalar CasaID en este dispositivo</button>

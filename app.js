@@ -118,6 +118,22 @@ async function deleteDoc(id) { await dbDel('documents', id); }
 const fmtSize = n => n < 1024 ? `${n} B` : n < 1048576 ? `${(n/1024).toFixed(1)} KB` : `${(n/1048576).toFixed(1)} MB`;
 const fmtDate = s => s.slice(0, 10);
 
+// ArrayBuffer <-> Base64 (chunked to avoid stack overflow on large files)
+function bufToB64(buf) {
+  const bytes = new Uint8Array(buf instanceof ArrayBuffer ? buf : buf.buffer);
+  let bin = '';
+  const CHUNK = 8192;
+  for (let i = 0; i < bytes.length; i += CHUNK)
+    bin += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+  return btoa(bin);
+}
+function b64ToBuf(b64) {
+  const bin = atob(b64);
+  const buf = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
+  return buf.buffer;
+}
+
 let toastTmr;
 function toast(msg, type = 'ok') {
   const el = document.getElementById('toast');
@@ -349,6 +365,81 @@ window.doDelete = async id => {
   toast('Documento eliminado.');
   renderGallery();
 };
+
+// ── Backup — Export ────────────────────────────────────────────────────
+window.doExportBackup = async () => {
+  if (!session) return;
+  const docs = await listDocs();
+  if (!docs.length) { toast('No tienes documentos para exportar.', 'err'); return; }
+
+  const btn = document.getElementById('btn-export');
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Exportando…';
+  try {
+    const payload = {
+      version: 1,
+      username: session.username,
+      exportedAt: new Date().toISOString(),
+      documents: docs.map(d => ({
+        id: d.id, origName: d.origName, mimeType: d.mimeType,
+        sizeBytes: d.sizeBytes, uploadedAt: d.uploadedAt,
+        iv: bufToB64(d.iv),
+        encData: bufToB64(d.encData)
+      }))
+    };
+    const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+    const a = Object.assign(document.createElement('a'), {
+      href: URL.createObjectURL(blob),
+      download: `casaid-backup-${new Date().toISOString().slice(0,10)}.casaid`
+    });
+    a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    toast(`Backup exportado (${docs.length} documento${docs.length > 1 ? 's' : ''}).`);
+  } catch (e) { toast('Error al exportar: ' + e.message, 'err'); }
+  finally { btn.disabled = false; btn.textContent = '💾 Exportar backup'; }
+};
+
+// ── Backup — Import ────────────────────────────────────────────────────
+window.triggerImport = () => document.getElementById('backupInput').click();
+
+window.handleBackupFile = async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  e.target.value = '';
+  await doImportBackup(file);
+};
+
+async function doImportBackup(file) {
+  const btn = document.getElementById('btn-import');
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Importando…';
+  try {
+    const text = await file.text();
+    const payload = JSON.parse(text);
+    if (!payload.version || !payload.documents) throw new Error('Archivo no válido.');
+
+    // Verify the backup was created by this user (same password = same key)
+    let ok = 0, skip = 0;
+    for (const d of payload.documents) {
+      const iv      = new Uint8Array(b64ToBuf(d.iv));
+      const encData = b64ToBuf(d.encData);
+      // Try to decrypt one document to verify key compatibility
+      if (ok + skip === 0) {
+        try { await aesDecrypt(session.key, iv, encData); }
+        catch { throw new Error('El backup no corresponde a tu contraseña actual.'); }
+      }
+      const existing = await dbGet('documents', d.id);
+      if (existing) { skip++; continue; }
+      await dbPut('documents', {
+        id: d.id, userId: session.id,
+        origName: d.origName, mimeType: d.mimeType,
+        sizeBytes: d.sizeBytes, uploadedAt: d.uploadedAt,
+        iv, encData
+      });
+      ok++;
+    }
+    renderGallery();
+    toast(`${ok} importado${ok !== 1 ? 's' : ''}${skip ? `, ${skip} ya existía${skip !== 1 ? 'n' : ''}` : ''}.`);
+  } catch (e) { toast('Error al importar: ' + e.message, 'err'); }
+  finally { btn.disabled = false; btn.textContent = '📂 Importar backup'; }
+}
 
 // ── Boot ───────────────────────────────────────────────────────────────
 (async () => {
