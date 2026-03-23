@@ -139,9 +139,10 @@
       display: flex; align-items: center; gap: .75rem;
       background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
       padding: .7rem 1rem; margin-top: .75rem; text-align: left;
+      max-width: 100%; overflow: hidden;
     }
-    .ficon { font-size: 1.5rem; }
-    .fmeta { flex: 1; min-width: 0; }
+    .ficon { font-size: 1.5rem; flex-shrink: 0; }
+    .fmeta { flex: 1; min-width: 0; overflow: hidden; }
     .fname { font-size: .85rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .fsize { font-size: .72rem; color: var(--muted); }
     .btn-upload {
@@ -170,9 +171,9 @@
       transition: box-shadow .2s;
     }
     .doc-card:hover { box-shadow: 0 4px 20px rgba(108,99,255,.15); }
-    .doc-head { display: flex; align-items: center; gap: .75rem; margin-bottom: .75rem; }
-    .doc-icon { font-size: 1.5rem; }
-    .doc-info { flex: 1; min-width: 0; }
+    .doc-head { display: flex; align-items: center; gap: .75rem; margin-bottom: .75rem; overflow: hidden; }
+    .doc-icon { font-size: 1.5rem; flex-shrink: 0; }
+    .doc-info { flex: 1; min-width: 0; overflow: hidden; }
     .doc-name { font-weight: 600; font-size: .88rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .doc-meta { font-size: .73rem; color: var(--muted); }
     .doc-actions { display: flex; gap: .45rem; flex-wrap: wrap; }
