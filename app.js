@@ -441,6 +441,104 @@ async function doImportBackup(file) {
   finally { btn.disabled = false; btn.textContent = '📂 Importar backup'; }
 }
 
+// ── Multi-page Scanner ─────────────────────────────────────────────────
+let scanPages = []; // Array of File images
+
+window.toggleScan = () => {
+  const body  = document.getElementById('scan-body');
+  const arrow = document.getElementById('scan-arrow');
+  const open  = body.style.display === 'none';
+  body.style.display = open ? '' : 'none';
+  arrow.classList.toggle('open', open);
+};
+
+window.triggerScan = () => document.getElementById('scanInput').click();
+
+window.handleScanPages = e => {
+  const files = Array.from(e.target.files).filter(f => f.type.startsWith('image/'));
+  if (!files.length) return;
+  scanPages.push(...files);
+  e.target.value = '';
+  renderScanThumbs();
+};
+
+function renderScanThumbs() {
+  const box = document.getElementById('scan-thumbs');
+  if (!scanPages.length) { box.innerHTML = ''; return; }
+  box.innerHTML = '';
+  scanPages.forEach((f, i) => {
+    const url = URL.createObjectURL(f);
+    const div = document.createElement('div');
+    div.className = 'scan-thumb';
+    div.innerHTML = `
+      <img src="${url}" alt="Pág ${i+1}" onload="URL.revokeObjectURL(this.src)">
+      <div class="scan-pg-num">Pág. ${i+1}</div>
+      <button class="scan-rm" onclick="removeScanPage(${i})" title="Quitar">✖</button>`;
+    box.appendChild(div);
+  });
+}
+
+window.removeScanPage = i => { scanPages.splice(i, 1); renderScanThumbs(); };
+window.clearScan      = () => { scanPages = []; renderScanThumbs(); };
+
+function fileToDataUrl(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = e => res(e.target.result);
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+}
+function loadImg(src) {
+  return new Promise(res => {
+    const img = new Image();
+    img.onload = () => res(img);
+    img.src = src;
+  });
+}
+
+window.combineScanToPDF = async () => {
+  if (!session) { toast('Inicia sesión primero.', 'err'); return; }
+  if (!scanPages.length) { toast('Añade al menos una imagen.', 'err'); return; }
+
+  const btn = document.getElementById('btn-combine');
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Combinando…';
+  const count = scanPages.length;
+  try {
+    const { jsPDF } = window.jspdf;
+    const pdf    = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+    const pgW = 210, pgH = 297, margin = 10;
+    const maxW = pgW - margin * 2, maxH = pgH - margin * 2;
+
+    for (let i = 0; i < scanPages.length; i++) {
+      // Render to canvas (normalises format + compresses for jsPDF)
+      const dataUrl = await fileToDataUrl(scanPages[i]);
+      const img     = await loadImg(dataUrl);
+      const canvas  = document.createElement('canvas');
+      canvas.width  = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      canvas.getContext('2d').drawImage(img, 0, 0);
+      const jpeg = canvas.toDataURL('image/jpeg', 0.88);
+
+      let dW = maxW, dH = (img.naturalHeight * maxW) / img.naturalWidth;
+      if (dH > maxH) { dH = maxH; dW = (img.naturalWidth * maxH) / img.naturalHeight; }
+      const x = margin + (maxW - dW) / 2;
+
+      if (i > 0) pdf.addPage();
+      pdf.addImage(jpeg, 'JPEG', x, margin, dW, dH);
+    }
+
+    const pdfBlob = pdf.output('blob');
+    const name    = `escaneo-${new Date().toISOString().slice(0,10)}.pdf`;
+    await saveDoc(new File([pdfBlob], name, { type: 'application/pdf' }));
+    scanPages = [];
+    renderScanThumbs();
+    renderGallery();
+    toast(`PDF de ${count} página${count !== 1 ? 's' : ''} guardado. ✅`);
+  } catch (e) { toast('Error: ' + e.message, 'err'); }
+  finally { btn.disabled = false; btn.textContent = '📄 Combinar en PDF'; }
+};
+
 // ── Boot ───────────────────────────────────────────────────────────────
 (async () => {
   await initDB();

@@ -259,14 +259,58 @@
       font-size: 1.2rem; color: var(--text);
     }
 
+    /* ── Scanner multi-página ── */
+    .scan-wrap {
+      background: var(--card); border-radius: 16px; border: 1px solid var(--border);
+      margin-bottom: 1.5rem; overflow: hidden;
+    }
+    .scan-toggle-btn {
+      display: flex; align-items: center; justify-content: space-between; width: 100%;
+      background: none; border: none; padding: 1rem 1.25rem; cursor: pointer;
+      font-family: inherit; font-size: .92rem; font-weight: 600; color: var(--text);
+    }
+    .scan-toggle-btn:hover { background: rgba(108,99,255,.05); }
+    .scan-arrow { transition: transform .25s; display: inline-block; font-size: .75rem; color: var(--muted); }
+    .scan-arrow.open { transform: rotate(90deg); }
+    .scan-body { padding: 0 1.25rem 1.25rem; border-top: 1px solid var(--border); }
+    .scan-hint { font-size: .78rem; color: var(--muted); margin: .75rem 0; }
+    .scan-thumbs {
+      display: flex; gap: .6rem; flex-wrap: wrap; margin-bottom: .85rem;
+    }
+    .scan-thumb {
+      position: relative; width: 80px; flex-shrink: 0;
+    }
+    .scan-thumb img {
+      width: 80px; height: 100px; object-fit: cover; border-radius: 6px;
+      border: 2px solid var(--border); display: block;
+    }
+    .scan-pg-num {
+      font-size: .65rem; text-align: center; color: var(--muted); margin-top: .2rem;
+    }
+    .scan-rm {
+      position: absolute; top: 2px; right: 2px;
+      background: rgba(239,68,68,.85); border: none; border-radius: 50%;
+      width: 18px; height: 18px; font-size: .6rem; color: #fff;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+    }
+    .scan-btns { display: flex; gap: .5rem; flex-wrap: wrap; }
+    .scan-btns .btn-act { font-size: .8rem; }
+    .scan-btns .btn-upload { font-size: .8rem; }
+
     /* ── Responsive ── */
     @media (max-width: 768px) {
       #sidebar { transform: translateX(-100%); }
       #sidebar.open { transform: none; box-shadow: 4px 0 20px rgba(0,0,0,.5); }
-      #main { margin-left: 0; padding: 1rem; padding-top: 4rem; }
+      #main { margin-left: 0; padding: 1rem; padding-top: 4rem; overflow-x: hidden; }
       #menu-toggle { display: flex; }
+      .hero { padding: 3rem 1rem 1rem; }
       .hero h1 { font-size: 2rem; }
       .features { grid-template-columns: 1fr; }
+      .doc-card { overflow: hidden; }
+      .doc-name { word-break: break-word; }
+      .doc-actions { row-gap: .4rem; }
+      .file-bar { flex-wrap: wrap; }
+      .confirm-del { flex-direction: column; align-items: flex-start; }
     }
   </style>
 </head>
@@ -365,6 +409,24 @@
         </div>
         <input type="file" id="fileInput" accept=".pdf,.jpg,.jpeg,.png,.webp" onchange="handleFileSelect(event)">
 
+        <!-- Scanner multi-página -->
+        <div class="scan-wrap">
+          <button class="scan-toggle-btn" onclick="toggleScan()">
+            <span>📷 Escanear documento multi-página</span>
+            <span class="scan-arrow" id="scan-arrow">▶</span>
+          </button>
+          <div id="scan-body" style="display:none" class="scan-body">
+            <p class="scan-hint">Foto a foto, combina varias páginas en un solo PDF cifrado.</p>
+            <div id="scan-thumbs" class="scan-thumbs"></div>
+            <div class="scan-btns">
+              <button class="btn-act" onclick="triggerScan()">📸 Añadir página(s)</button>
+              <button class="btn-upload" id="btn-combine" onclick="combineScanToPDF()">📄 Combinar en PDF</button>
+              <button class="btn-act danger" onclick="clearScan()">🗑️ Limpiar</button>
+            </div>
+            <input type="file" id="scanInput" accept="image/*" multiple onchange="handleScanPages(event)" style="display:none">
+          </div>
+        </div>
+
         <hr class="div">
 
         <!-- Gallery -->
@@ -379,6 +441,7 @@
   </div>
 
   <div id="toast"></div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
