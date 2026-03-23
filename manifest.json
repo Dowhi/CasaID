@@ -1,0 +1,13 @@
+{
+  "name": "CasaID — Documentos familiares",
+  "short_name": "CasaID",
+  "description": "Tu bóveda familiar de documentos de identidad. Seguro, cifrado y privado.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#0E1117",
+  "theme_color": "#6C63FF",
+  "orientation": "any",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
